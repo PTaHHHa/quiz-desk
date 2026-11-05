@@ -92,7 +92,12 @@ function leaderboard(upto = scoredUpto()) {
     return { id, name: tm.name, score };
   }).sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 }
-function withRanks(rows) { return rows.map((r, i) => ({ ...r, rank: i + 1 })); }
+// Teams with equal scores share a place; the next place is skipped (1, 1, 3).
+function withRanks(rows) {
+  const out = [];
+  rows.forEach((r, i) => out.push({ ...r, rank: i > 0 && r.score === rows[i - 1].score ? out[i - 1].rank : i + 1 }));
+  return out;
+}
 const boardData = upto => leaderboard(upto).map(r => ({ id: r.id, name: r.name, score: r.score }));
 const rightTeams = q => Object.keys(S.teams).filter(id => isCorrect(q, (S.answers[id] || {})[q.id], id));
 const secsLeft = () => S.game.deadline ? Math.max(0, Math.ceil((S.game.deadline - Date.now()) / 1000)) : null;
