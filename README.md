@@ -1,23 +1,21 @@
 # Quiz Desk
 
-Квиз-система в стиле Kahoot для живых игр: ведущий выводит вопросы на большой экран, команды отвечают с телефонов. Сервер запускается на ноутбуке ведущего, игроки подключаются через Wi-Fi по QR-коду. Интернет и аккаунты не нужны, у проекта нет ни одной зависимости — только Node.js.
+A Kahoot-style pub quiz for live games. The host shows questions on a big screen and teams answer from their phones. The server runs on the host's laptop and players join over Wi-Fi by scanning a QR code. No internet, no accounts, and no dependencies — just Node.js.
 
-*A Kahoot-style pub quiz that runs on the host's laptop. Teams join from their phones over local Wi-Fi via a QR code. No accounts, no internet, no dependencies — just Node.js 18+. Interface in English and Russian.*
+## Features
 
-## Возможности
+- **Game library.** New and previous quizzes, a "Play again" button, and a results history for every game.
+- **Rounds.** Each round has its own name, picture and background music. If you don't upload a track, a built-in melody synthesized in the browser plays instead.
+- **Questions.** Four answer options or free text, a timer, points, and audio or video attached to a question (up to 500 MB per file).
+- **Answer checking.** Automatic, with manual ticks for disputed cases ("Canbera" instead of "Canberra").
+- **Results.** Preliminary and final standings on the host screen and on the phones. Teams with equal scores share the same place.
+- **One team = one device.** A team is bound to its phone and survives a page reload.
+- **Interface language.** English or Russian, set separately for each game.
+- **Server-side rules.** Correct answers never reach the phones before the reveal, answers after the timer are rejected, and team names are unique.
 
-- **Библиотека игр.** Новые и прошлые квизы, кнопка «Сыграть заново», история результатов каждой игры.
-- **Раунды.** У каждого раунда своё название, картинка и фоновая музыка. Если своей нет, играет встроенная мелодия, синтезированная в браузере.
-- **Вопросы.** Четыре варианта ответа или свободный текст, таймер, баллы, музыка и видео к вопросу (до 500 МБ на файл).
-- **Проверка ответов.** Автоматическая, с ручными галочками для спорных случаев («Канбера» вместо «Канберра»).
-- **Результаты.** Предварительные и финальные результаты на экране ведущего и на телефонах.
-- **Одна команда — одно устройство.** Команда привязана к телефону и не теряется после перезагрузки страницы.
-- **Язык интерфейса.** Английский или русский, отдельно для каждой игры.
-- **Правила на сервере.** Правильные ответы не уходят на телефоны до показа, ответы после таймера не принимаются, названия команд уникальны.
+## Quick start
 
-## Быстрый старт
-
-Нужен [Node.js](https://nodejs.org) 18 или новее (версия LTS).
+You need [Node.js](https://nodejs.org) 18 or newer (the LTS version).
 
 ```bash
 git clone https://github.com/<you>/quiz-desk.git
@@ -25,9 +23,9 @@ cd quiz-desk
 npm start
 ```
 
-Без терминала: дважды щёлкните `start.bat` на Windows или `start.command` на macOS. На macOS при первом запуске нужно щёлкнуть правой кнопкой и выбрать «Открыть».
+Without a terminal: double-click `start.bat` on Windows or `start.command` on macOS. On macOS, right-click and choose "Open" the first time.
 
-Откроется страница ведущего, а в окне сервера появятся адреса:
+The host page opens, and the server window prints the addresses:
 
 ```
   Host, on this computer:     http://localhost:3000/
@@ -35,81 +33,81 @@ npm start
   Host from another device:   http://192.168.1.23:3000/?host=…
 ```
 
-Создайте игру и выведите экран на проектор. В лобби будут QR-код и адрес для игроков.
+Create a game and put the screen on the projector. The lobby shows a QR code and the address for players.
 
-**Вести игру с другого устройства** (например, с планшета) можно по ссылке из строки `Host from another device`. Не показывайте её игрокам.
+**To run the game from another device** (for example, a tablet), use the link from the `Host from another device` line. Don't show it to the players.
 
-## Настройки
+## Configuration
 
-Настройки задаются переменными окружения:
+Settings are environment variables:
 
-| Переменная | По умолчанию | Что делает |
+| Variable | Default | Description |
 |---|---|---|
-| `PORT` | `3000` | Порт сервера |
-| `QUIZDESK_DATA` | `./data` | Папка с базой и загруженными файлами |
-| `QUIZDESK_MAX_UPLOAD_MB` | `500` | Максимальный размер одного файла |
-| `NO_OPEN` | — | Если задана, не открывать браузер при запуске |
+| `PORT` | `3000` | Server port |
+| `QUIZDESK_DATA` | `./data` | Folder for the database and uploaded files |
+| `QUIZDESK_MAX_UPLOAD_MB` | `500` | Maximum size of a single file |
+| `NO_OPEN` | — | If set, don't open the browser on start |
 
-Все данные лежат в `data/`: `db.json` с играми, командами и ответами и `media/` с файлами. Папка не попадает в git. Чтобы сделать резервную копию, скопируйте её; чтобы начать с нуля, удалите.
+All data lives in `data/`: `db.json` with games, teams and answers, and `media/` with uploaded files. The folder is git-ignored. To back up, copy it; to start from scratch, delete it.
 
-## Если телефоны не подключаются
+## If phones can't connect
 
-1. **Android + Chrome.** Разрешите Chrome доступ к «Устройствам поблизости»: Настройки → Приложения → Chrome → Разрешения. Без этого Chrome не открывает локальные адреса и показывает `ERR_TOO_MANY_RETRIES`.
-2. **Файрвол Windows.** Разрешите Node.js входящие подключения. Можно одной командой в PowerShell от администратора:
+1. **Android + Chrome.** Allow Chrome access to "Nearby devices": Settings → Apps → Chrome → Permissions. Without it, Chrome can't open local addresses and shows `ERR_TOO_MANY_RETRIES`.
+2. **Windows firewall.** Allow inbound connections for Node.js. One command in an administrator PowerShell does it:
    ```
    New-NetFirewallRule -DisplayName "Quiz Desk" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow -Profile Any
    ```
-3. **Одна сеть.** Телефон должен быть в той же Wi-Fi-сети, что и ноутбук. Гостевые сети часто изолируют устройства друг от друга: тогда используйте основную сеть или свой роутер.
-4. **Несколько адресов.** Если у ноутбука несколько сетевых адаптеров, выберите нужный адрес в лобби под QR-кодом, в пункте «Другой адрес».
+3. **Same network.** The phone must be on the same Wi-Fi network as the laptop. Guest networks often isolate devices from each other; use the main network or your own router instead.
+4. **Several addresses.** If the laptop has several network adapters, pick the right address in the lobby under the QR code ("Another address").
 
-## Разработка
+## Development
 
 ```bash
-npm run dev    # перезапуск сервера при изменениях (node --watch)
-npm test       # тесты на встроенном раннере node:test
+npm run dev    # restart the server on changes (node --watch)
+npm test       # tests on the built-in node:test runner
 ```
 
-Сборки нет: фронтенд — обычные HTML, CSS и JS, сервер — чистый Node.js. Если открыть `public/index.html` напрямую, без сервера, приложение запустится в демо-режиме с тестовыми данными.
+There is no build step: the frontend is plain HTML, CSS and JS, and the server is plain Node.js. If you open `public/index.html` directly, without the server, the app starts in demo mode with sample data.
 
 ```
 server/
-  index.js        HTTP-сервер: маршруты, SSE, загрузки, статика
-  rules.js        кто что видит и может записать (покрыт тестами)
-  store.js        хранение в data/db.json
-  seed.js         пример квиза для первого запуска
-  config.js       настройки из переменных окружения
-  http-utils.js   отдача файлов с Range, адреса в сети
+  index.js        HTTP server: routes, SSE, uploads, static files
+  rules.js        who can see and write what (covered by tests)
+  store.js        storage in data/db.json
+  seed.js         example quiz for the first start
+  config.js       settings from environment variables
+  http-utils.js   file serving with Range, network addresses
 public/
   index.html
   css/styles.css
   js/
-    util.js       хелперы
-    qr.js         генератор QR-кодов без зависимостей
-    i18n.js       тексты EN/RU
-    state.js      состояние и раунды
-    music.js      фоновая музыка и синтезатор
-    store.js      клиент данных: сервер или демо-режим
-    game.js       логика игры и редактор
-    views.js      отрисовка экранов
-    events.js     обработчики событий, запуск
-test/             тесты правил и HTTP API
+    util.js       helpers
+    qr.js         dependency-free QR code generator
+    i18n.js       EN/RU strings
+    state.js      state and rounds
+    music.js      background music and synthesizer
+    store.js      data client: server or demo mode
+    game.js       game logic and editor
+    views.js      screen rendering
+    events.js     event handlers, startup
+test/             tests for the rules and the HTTP API
 ```
 
-### Как устроены данные
+### Data model
 
-Состояние хранится как набор документов с путями `коллекция/id`:
+State is stored as a set of documents with `collection/id` paths:
 
-- `games/{id}` — игра: раунды, вопросы и текущее состояние (фаза, вопрос, таймер, таблица результатов, история).
-- `gkeys/{id}` — правильные ответы и ручные отметки ведущего. Видит только ведущий.
-- `game/live` — какая игра сейчас открыта для команд.
-- `teams/{uid}`, `answers/{uid}` — команда и ответы конкретного устройства, сгруппированные по сессиям игры.
+- `games/{id}` — a game: rounds, questions and live state (phase, current question, timer, leaderboard, history).
+- `gkeys/{id}` — correct answers and the host's manual overrides. Visible to the host only.
+- `game/live` — which game is currently open to teams.
+- `teams/{uid}`, `answers/{uid}` — the team and answers of a specific device, grouped by game session.
 
-Клиент получает свою часть состояния через `GET /api/stream` (Server-Sent Events) и пишет через `POST /api/doc`. Сервер проверяет каждую запись правилами из `server/rules.js`. Ведущим считается тот, кто открыл страницу на самом компьютере с сервером (`localhost`) или по ссылке с токеном.
+The client receives its part of the state through `GET /api/stream` (Server-Sent Events) and writes through `POST /api/doc`. The server validates every write with the rules in `server/rules.js`. The host is whoever opens the page on the server computer itself (`localhost`) or through the link with the token.
 
-### Безопасность
+### Security
 
-Сервер рассчитан на доверенную локальную сеть и работает по HTTP. Если хотите выложить его в интернет, поставьте перед ним HTTPS-прокси (например, Caddy) или используйте хостинг с HTTPS.
+The server is designed for a trusted local network and speaks plain HTTP. If you want to expose it to the internet, put an HTTPS proxy (for example, Caddy) in front of it or use a host with HTTPS.
 
-## Лицензия
+## License
 
 [MIT](LICENSE)

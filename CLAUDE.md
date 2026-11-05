@@ -1,7 +1,5 @@
 # Quiz Desk — context for Claude Code
 
-**Talk to the user in Russian.** The user is a Russian speaker; code, comments and commit messages stay in English.
-
 ## What this is
 
 Quiz Desk is a Kahoot-style pub quiz. A host runs the game from a laptop connected to a projector, and teams answer from their phones over local Wi-Fi. The server runs on the host's laptop. There are no accounts, no internet requirement and **no dependencies** — just Node.js 18+.
@@ -93,7 +91,7 @@ Opening `public/index.html` directly (file://) starts **demo mode**: an in-memor
 - **Rounds:** name, picture (default is a generated SVG cover) and background music (default is the built-in synth). Music plays only on the host device, from the round intro through the round, and pauses for questions that have their own audio or video. There is a player with pause and volume.
 - **Question media:** audio and/or video **uploaded from the computer only**. YouTube links were explicitly dropped by the user — do not re-add them. Media plays on the host screen only; phones show "watch/listen on the host screen".
 - **Answer checking lives on the Results tab:** a per-question review with auto ticks and manual overrides (checkbox, "auto"/"manual" label, "Restore auto-check"). The Game tab shows only verdict tags and a link to the review.
-- **Ranking is sequential (1, 2, 3, 4)**; ties are broken alphabetically. The user found shared places (1, 2, 2, 2) confusing.
+- **Ranking: teams with equal scores share a place** (1, 1, 3); the next place is skipped. Ties are listed alphabetically. This replaced the earlier sequential numbering at the user's request. Same on host and team screens (`withRanks` in `game.js`).
 - The join QR code and address appear in the lobby and on the Teams tab, with a selector when there are several LAN IPs.
 
 ## Conventions
