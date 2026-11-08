@@ -1,7 +1,5 @@
 # Quiz Desk — context for Claude Code
 
-**Talk to the user in Russian.** The user is a Russian speaker; code, comments and commit messages stay in English.
-
 ## What this is
 
 Quiz Desk is a Kahoot-style pub quiz. A host runs the game from a laptop connected to a projector, and teams answer from their phones over local Wi-Fi. The server runs on the host's laptop. There are no accounts, no internet requirement and **no dependencies** — just Node.js 18+.
