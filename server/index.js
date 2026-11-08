@@ -13,7 +13,7 @@ const { exec } = require("child_process");
 const { PORT, PUBLIC, MEDIA, DATA, MAX_UPLOAD, OPEN_BROWSER } = require("./config");
 const store = require("./store");
 const { viewFor, applyWrite, lockExpired } = require("./rules");
-const { send, readJson, serveFile, joinUrls, STATIC_TYPES } = require("./http-utils");
+const { send, readJson, serveFile, networkInfo, STATIC_TYPES } = require("./http-utils");
 
 const db = store.db;
 
@@ -49,6 +49,15 @@ function changed() {
 }
 setInterval(() => { for (const c of clients) c.res.write(": ping\n\n"); }, 20000);
 setInterval(() => { if (lockExpired(db.docs)) changed(); }, 300);
+
+/* Network addresses and hotspot flag, re-read every 15 s so the QR code follows Wi-Fi/hotspot changes without a restart. */
+let net = networkInfo(PORT);
+const sendNet = c => { if (c.host) c.res.write("event: net\ndata: " + JSON.stringify(net) + "\n\n"); };
+setInterval(() => {
+  const next = networkInfo(PORT);
+  if (JSON.stringify(next) === JSON.stringify(net)) return;
+  net = next; for (const c of clients) sendNet(c);
+}, 15000);
 
 /* ---------- uploads ---------- */
 const MEDIA_TYPES = /^(image\/(png|jpeg|webp|gif)|audio\/[a-z0-9.+-]+|video\/(mp4|webm|quicktime|x-m4v))$/;
@@ -97,15 +106,15 @@ const server = http.createServer(async (req, res) => {
   const p = url.pathname;
   try {
     if (p === "/api/me" && req.method === "GET") {
-      const w = who(req, url), urls = joinUrls(PORT);
-      return send(res, 200, { uid: w.uid, host: w.host, join: urls, hostLink: w.host && urls[0] ? urls[0] + "?host=" + db.hostToken : null });
+      const w = who(req, url), urls = net.join;
+      return send(res, 200, { uid: w.uid, host: w.host, join: urls, hotspot: net.hotspot, hostLink: w.host && urls[0] ? urls[0] + "?host=" + db.hostToken : null });
     }
     if (p === "/api/stream" && req.method === "GET") {
       const w = who(req, url);
       res.writeHead(200, { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store", "Connection": "keep-alive", "X-Accel-Buffering": "no" });
       res.write("retry: 2000\n\n");
       const c = { res, uid: w.uid, host: w.host, last: null };
-      clients.add(c); sendState(c, true);
+      clients.add(c); sendState(c, true); sendNet(c);
       req.on("close", () => clients.delete(c));
       return;
     }
@@ -142,8 +151,9 @@ server.on("error", e => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  const urls = joinUrls(PORT);
+  const urls = net.join;
   console.log("\n  Quiz Desk is running\n");
+  if (net.hotspot) console.log("  Mobile hotspot detected — its address is listed first.\n");
   console.log(`  Host, on this computer:     http://localhost:${PORT}/`);
   if (urls.length) {
     console.log(`  Teams join (same Wi-Fi):    ${urls[0]}`);

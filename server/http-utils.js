@@ -47,16 +47,26 @@ function serveFile(req, res, file, type, cache) {
   });
 }
 
-/* LAN addresses teams can use, most likely Wi-Fi ranges first. */
-function joinUrls(port) {
+/* Addresses the laptop gets when its mobile hotspot is on: Windows, macOS, Linux (NetworkManager). */
+const HOTSPOT_IPS = ["192.168.137.1", "192.168.2.1", "10.42.0.1"];
+const isHotspot = ips => ips.some(ip => HOTSPOT_IPS.includes(ip));
+
+/* LAN addresses teams can use: the hotspot address first, then likely Wi-Fi ranges. */
+function lanAddresses(ifaces = os.networkInterfaces()) {
   const out = [];
-  for (const list of Object.values(os.networkInterfaces())) for (const a of list || []) {
+  for (const list of Object.values(ifaces)) for (const a of list || []) {
     if (a.family === "IPv4" && !a.internal) out.push(a.address);
   }
-  const rank = ip => ip.startsWith("192.168.") ? 0 : ip.startsWith("10.") ? 1 : /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ? 2 : 3;
-  return out.sort((a, b) => rank(a) - rank(b)).map(ip => `http://${ip}:${port}/`);
+  const rank = ip => HOTSPOT_IPS.includes(ip) ? -1 : ip.startsWith("192.168.") ? 0 : ip.startsWith("10.") ? 1 : /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ? 2 : 3;
+  return [...new Set(out)].sort((a, b) => rank(a) - rank(b));
 }
+/* What the host page needs for the QR code: join URLs (hotspot first) and the hotspot flag. */
+function networkInfo(port, ifaces) {
+  const ips = lanAddresses(ifaces);
+  return { join: ips.map(ip => `http://${ip}:${port}/`), hotspot: isHotspot(ips) };
+}
+const joinUrls = (port, ifaces) => networkInfo(port, ifaces).join;
 
 const STATIC_TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".png": "image/png", ".ico": "image/x-icon", ".json": "application/json; charset=utf-8", ".woff2": "font/woff2" };
 
-module.exports = { send, readJson, serveFile, joinUrls, STATIC_TYPES };
+module.exports = { send, readJson, serveFile, joinUrls, networkInfo, lanAddresses, isHotspot, HOTSPOT_IPS, STATIC_TYPES };
