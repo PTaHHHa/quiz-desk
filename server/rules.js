@@ -22,13 +22,32 @@ function liveGame(docs) {
   return gid ? docs["games/" + gid] : null;
 }
 
+/*
+ * The game document is visible to teams, but its answer data is released only at the right moment:
+ *  - `reveal` (the correct answer of one question) only while that answer is being shown;
+ *  - `review` (the end-of-round walkthrough) only during the review, and only the questions
+ *    the host has already stepped to (items 0..step). The host may store the whole review up front.
+ */
+function teamGameView(g) {
+  const v = Object.assign({}, g);
+  if ("reveal" in v && v.phase !== "reveal") v.reveal = null;
+  if ("review" in v) {
+    const rv = v.review;
+    if (v.phase === "review" && rv && Array.isArray(rv.items)) {
+      const step = Math.max(0, Math.floor(Number(rv.step)) || 0);
+      v.review = Object.assign({}, rv, { step, items: rv.items.slice(0, step + 1) });
+    } else v.review = null;
+  }
+  return v;
+}
+
 function viewFor(docs, viewer) {
   if (viewer.host) return docs;
   const v = {}, live = docs["game/live"] || { gid: null };
   v["game/live"] = live;
   const g = live.gid && docs["games/" + live.gid];
   if (g) {
-    v["games/" + live.gid] = g;
+    v["games/" + live.gid] = teamGameView(g);
     for (const [p, d] of Object.entries(docs)) {
       if (p.startsWith("teams/") && d && d[g.sid]) v[p] = { [g.sid]: { name: d[g.sid].name, at: d[g.sid].at } };
     }

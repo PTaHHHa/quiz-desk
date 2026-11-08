@@ -90,3 +90,52 @@ test("host can write and delete any document", () => {
   assert.ok(!("games/g2" in d));
   assert.throws(() => applyWrite(d, HOST, "../etc/passwd", {}), err("invalid_argument"));
 });
+
+const REVIEW = { rid: "r1", step: 0, items: [
+  { qid: "q1", correct: 1, accepted: [], right: ["u_aaaa"] },
+  { qid: "q2", correct: null, accepted: ["canberra"], right: [] }
+] };
+
+test("round mode: teams get no review data outside the review phase", () => {
+  for (const phase of ["open", "locked", "round", "final"]) {
+    const d = docs({ phase, idx: 0, revealMode: "round", review: REVIEW });
+    assert.equal(viewFor(d, A)["games/g1"].review, null, phase);
+    assert.deepEqual(viewFor(d, HOST)["games/g1"].review, REVIEW, "host sees everything");
+  }
+});
+
+test("round mode: during the review teams only get the questions the host has reached", () => {
+  const d = docs({ phase: "review", idx: 1, revealMode: "round", review: REVIEW });
+  let r = viewFor(d, A)["games/g1"].review;
+  assert.deepEqual(r.items.map(i => i.qid), ["q1"]);
+  d["games/g1"].review = { ...REVIEW, step: 1 };
+  r = viewFor(d, A)["games/g1"].review;
+  assert.deepEqual(r.items.map(i => i.qid), ["q1", "q2"]);
+  d["games/g1"].review = { ...REVIEW, step: 2 };
+  assert.equal(viewFor(d, A)["games/g1"].review.items.length, 2, "the results step shows the whole round");
+  assert.equal(d["games/g1"].review.items.length, 2, "the stored game is not modified");
+  d["games/g1"].review = { ...REVIEW, step: "junk" };
+  assert.equal(viewFor(d, A)["games/g1"].review.items.length, 1, "a broken step falls back to the first question");
+});
+
+test("a stale reveal is never sent to teams", () => {
+  const reveal = { qid: "q1", correct: 1, accepted: [], right: [] };
+  const d = docs({ phase: "locked", idx: 0, reveal });
+  assert.equal(viewFor(d, A)["games/g1"].reveal, null);
+  d["games/g1"].phase = "reveal";
+  assert.deepEqual(viewFor(d, A)["games/g1"].reveal, reveal);
+});
+
+test("old games without revealMode or review still work for teams", () => {
+  const v = viewFor(docs({ phase: "open", idx: 0 }), A)["games/g1"];
+  assert.ok(!("review" in v) && !("revealMode" in v));
+  assert.equal(v.phase, "open");
+});
+
+test("round mode: answers are still accepted only while the question is open", () => {
+  const d = docs({ phase: "locked", idx: 0, revealMode: "round" });
+  applyWrite(d, A, "teams/u_aaaa", { s1: { name: "Owls" } });
+  assert.throws(() => applyWrite(d, A, "answers/u_aaaa", { a1: { q1: { c: 1 } } }), err("closed"));
+  d["games/g1"].phase = "review";
+  assert.throws(() => applyWrite(d, A, "answers/u_aaaa", { a1: { q1: { c: 1 } } }), err("closed"));
+});

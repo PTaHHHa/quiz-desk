@@ -146,7 +146,7 @@ function replayGame(gid) {
   const g = S.games[gid]; if (!g) return;
   const other = busyElsewhere(gid);
   ask(t("confirmReplay", g.title) + (other ? " " + t("switchLive", other.title) : ""), t("replayYes"), async () => {
-    const ok = await setGameById(gid, { ...newIds(), phase: "lobby", idx: -1, ri: null, deadline: null, reveal: null, board: null, boardKind: null, regOpen: true });
+    const ok = await setGameById(gid, { ...newIds(), phase: "lobby", idx: -1, ri: null, deadline: null, reveal: null, review: null, board: null, boardKind: null, regOpen: true });
     if (!ok) return;
     try { const k = await S.db.doc("gkeys/" + gid).get(); await S.db.doc("gkeys/" + gid).set({ keys: (k.exists && k.data().keys) || {}, overrides: {} }); } catch (e) {}
     enterGame(gid);
@@ -166,7 +166,32 @@ function goHome() {
 }
 
 /* ---------- host game actions ---------- */
-function startRound(rid) { setGame({ phase: "round", ri: rid, deadline: null, reveal: null }); }
+function startRound(rid) { setGame({ phase: "round", ri: rid, deadline: null, reveal: null, review: null }); }
+/* Reveal mode: "question" (default, also for old games without the field) or "round". */
+const roundMode = () => S.game.revealMode === "round";
+function isLastOfRound() {
+  const g = S.game, q = g.questions[g.idx], nq = g.questions[g.idx + 1];
+  return !!q && (!nq || roundOfQ(nq).id !== roundOfQ(q).id);
+}
+/* The whole walkthrough of a round, built from the current auto-checks and manual overrides. */
+function buildReview(rid, step = 0) {
+  const items = S.game.questions.filter(q => roundOfQ(q).id === rid).map(q => {
+    const k = S.keys.keys[q.id] || {};
+    return { qid: q.id, correct: q.type === "choice" ? (k.correct ?? null) : null, accepted: q.type === "text" ? (k.accepted || []) : [], right: rightTeams(q) };
+  });
+  return { rid, step, items };
+}
+function startReview() {
+  const q = curQ(); if (!q) return;
+  const rid = roundOfQ(q).id;
+  setGame({ phase: "review", ri: rid, deadline: null, reveal: null, review: buildReview(rid) });
+}
+function reviewNext() {
+  const g = S.game, rv = g.review; if (g.phase !== "review" || !rv) return;
+  const step = Math.min(rv.step + 1, rv.items.length), patch = { review: { ...rv, step } };
+  if (step >= rv.items.length) { patch.board = boardData(g.idx); patch.boardKind = "round"; }
+  setGame(patch);
+}
 function openQuestion(i) {
   const q = S.game.questions[i]; if (!q) return;
   const tm = Number(q.time) || 0;
@@ -188,7 +213,7 @@ function ask(msg, yes, fn, danger) { S.ask = { msg, yes, fn, danger }; render();
 async function restartGame() {
   S.busy = true; render();
   await write(() => S.db.doc("gkeys/" + S.cur).set({ keys: S.keys.keys, overrides: {} }));
-  await setGame({ aid: "a_" + uid(), phase: "lobby", idx: -1, ri: null, deadline: null, reveal: null, board: null, boardKind: null });
+  await setGame({ aid: "a_" + uid(), phase: "lobby", idx: -1, ri: null, deadline: null, reveal: null, review: null, board: null, boardKind: null });
   S.busy = false; S.tab = "game"; S.reviewQ = null; flash(t("gameReset"));
 }
 async function setOverride(qid, teamId, val) {
@@ -204,9 +229,16 @@ async function applyOverrides(qid, ov) {
   const q = S.game.questions.find(x => x.id === qid);
   const ok = await write(() => S.db.doc("gkeys/" + S.cur).set({ keys: S.keys.keys, overrides: ov }));
   if (!ok || !q) return;
-  if (S.game.phase === "reveal" && S.game.reveal && S.game.reveal.qid === qid) await setGame({ reveal: Object.assign({}, S.game.reveal, { right: rightTeams(q) }), board: boardData(S.game.idx) });
-  else if (S.game.phase === "final") await setGame(finalPatch());
-  else if (S.game.board) await setGame({ board: boardData() });
+  const g = S.game;
+  if (g.phase === "reveal" && g.reveal && g.reveal.qid === qid) await setGame({ reveal: Object.assign({}, g.reveal, { right: rightTeams(q) }), board: boardData(g.idx) });
+  else if (g.phase === "review" && g.review) {
+    // The walkthrough shows the corrected result; the table only exists once the host reached it.
+    const patch = { review: buildReview(g.review.rid, g.review.step) };
+    if (g.review.step >= g.review.items.length) patch.board = boardData(g.idx);
+    await setGame(patch);
+  }
+  else if (g.phase === "final") await setGame(finalPatch());
+  else if (g.board && !(roundMode() && ["open", "locked"].includes(g.phase))) await setGame({ board: boardData() });
 }
 function resetAuto(qid) { const ov = clone(S.keys.overrides || {}); delete ov[qid]; applyOverrides(qid, ov); flash(t("autoRestored")); }
 let flashT = null;
@@ -216,7 +248,7 @@ function flash(msg) { S.toast = msg; render(); clearTimeout(flashT); flashT = se
 function qToDraft(q) { const k = S.keys.keys[q.id] || {}; return { ...clone(q), options: (q.options || []).concat(["", "", "", ""]).slice(0, 4), correct: k.correct ?? null, accepted: (k.accepted || []).join("\n") }; }
 function ensureDraft() {
   if (S.draft) return;
-  S.draft = { title: S.game.title, rounds: roundsOf().map(r => ({ ...clone(r), qs: S.game.questions.filter(q => roundOfQ(q).id === r.id).map(qToDraft) })) };
+  S.draft = { title: S.game.title, revealMode: roundMode() ? "round" : "question", rounds: roundsOf().map(r => ({ ...clone(r), qs: S.game.questions.filter(q => roundOfQ(q).id === r.id).map(qToDraft) })) };
 }
 const newQuestion = () => ({ id: "q" + uid(), text: "", type: "choice", options: ["", "", "", ""], time: 30, points: 1, correct: null, accepted: "", audio: null, video: null });
 const newRound = n => ({ id: "r" + uid(), name: t("roundN", n), image: null, music: null, musicName: "", qs: [newQuestion()] });
@@ -240,7 +272,7 @@ async function saveDraft() {
   const questions = all.map(q => ({ id: q.id, round: q.round, text: q.text.trim(), type: q.type, options: q.type === "choice" ? q.options.map(o => o.trim()) : ["", "", "", ""], time: Math.max(0, Math.min(600, Number(q.time) || 0)), points: Math.max(1, Math.min(100, Number(q.points) || 1)), audio: q.audio || null, video: q.video || null }));
   const keys = {}; all.forEach(q => { keys[q.id] = { correct: q.type === "choice" ? q.correct : null, accepted: q.type === "text" ? q.accepted.split(/\n|;/).map(s => s.trim()).filter(Boolean) : [] }; });
   const ok1 = await write(() => S.db.doc("gkeys/" + S.cur).set({ keys, overrides: S.keys.overrides || {} }));
-  const ok2 = ok1 && await setGame({ title: (S.draft.title || "").trim() || t("untitled"), rounds, questions });
+  const ok2 = ok1 && await setGame({ title: (S.draft.title || "").trim() || t("untitled"), revealMode: S.draft.revealMode === "round" ? "round" : "question", rounds, questions });
   if (ok2) { S.dirty = false; S.draft = null; stopPreview(); flash(t("saved")); }
 }
 function moveQ(r, i, d) {
