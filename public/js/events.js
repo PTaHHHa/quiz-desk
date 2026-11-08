@@ -35,6 +35,8 @@ document.addEventListener("click", e => {
     case "open": openQuestion(i); break;
     case "lock": setGame({ phase: "locked" }); break;
     case "reveal": revealCurrent(); break;
+    case "review": startReview(); break;
+    case "reviewNext": reviewNext(); break;
     case "final": showFinal(); break;
     case "prelim": pushPrelim(); break;
     case "reset": ask(t("restartConfirm"), t("restartYes"), restartGame, true); break;
@@ -97,6 +99,7 @@ document.addEventListener("change", e => {
   if (el.dataset.join) { S.joinIdx = Number(el.value); render(); return; }
   const k = el.dataset.ed; if (!k) return;
   const r = Number(el.dataset.r), i = Number(el.dataset.i);
+  if (k === "revealMode") { S.draft.revealMode = el.value === "round" ? "round" : "question"; S.dirty = true; render(); return; }
   if (k === "type") { S.draft.rounds[r].qs[i].type = el.value; S.dirty = true; render(); }
   if (k === "correct") { S.draft.rounds[r].qs[i].correct = Number(el.dataset.j); S.dirty = true; render(); }
 });

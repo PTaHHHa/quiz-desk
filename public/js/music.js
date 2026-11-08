@@ -80,7 +80,7 @@ const mediaQActive = () => { const cq = curQ(); return !!(cq && (cq.audio || cq.
 function syncMusic() {
   if (S.preview) return;
   const g = S.game, rid = curRoundId();
-  if (!S.me.canEdit || S.screen !== "game" || !S.musicOn || mediaQActive() || !["round", "open", "locked", "reveal"].includes(g.phase) || !rid) { if (Music.playing) Music.stop(); return; }
+  if (!S.me.canEdit || S.screen !== "game" || !S.musicOn || mediaQActive() || !["round", "open", "locked", "reveal", "review"].includes(g.phase) || !rid) { if (Music.playing) Music.stop(); return; }
   const r = roundById(rid); if (!r) return;
   Music.play(S.cur + ":" + rid + ":" + (r.music || "synth"), r.music ? assetUrl(r.music) : null, roundIndex(rid));
 }

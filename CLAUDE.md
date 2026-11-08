@@ -13,7 +13,7 @@ Repo: https://github.com/PTaHHHa/quiz-desk. The user works on Windows, in VS Cod
 ```bash
 npm start        # node server/index.js — opens the host page at http://localhost:3000
 npm run dev      # node --watch
-npm test         # node --test; 12 tests (rules + HTTP API), also run by GitHub Actions on Node 18/20/22
+npm test         # node --test; 17 tests (rules + HTTP API), also run by GitHub Actions on Node 18/20/22
 ```
 
 Opening `public/index.html` directly (file://) starts **demo mode**: an in-memory store with sample games and auto-answering bots.
@@ -45,7 +45,9 @@ Opening `public/index.html` directly (file://) starts **demo mode**: an in-memor
   - `rounds[]`: `{id, name, image, music, musicName}`
   - `questions[]`: `{id, round, text, type: "choice"|"text", options[4], time, points, audio: {id,name}|null, video: {kind:"file", id, name}|null}`
   - live state:
-    - `phase`: `lobby` → `round` → `open` → `locked` → `reveal` → … → `final`
+    - `revealMode`: `"question"` (default; a missing field means this, so old games are unchanged) | `"round"`. Set in the editor ("When to show answers"), saved with the rounds and questions.
+    - `phase`: `lobby` → `round` → `open` → `locked` → `reveal` → … → `final`. In `revealMode: "round"` the per-question `reveal` is skipped: `locked` → next question, and after the last question of a round `locked` → `review` → next round intro (or `final`).
+    - `review`: `{rid, step, items: [{qid, correct, accepted[], right[]}]}`, only during `phase === "review"`. `step` is the question being discussed; `step === items.length` is the round results table (`board`, `boardKind: "round"`). The host stores all items; teams get `items[0..step]` only.
     - `idx` (current question), `ri` (current round id), `deadline`, `regOpen`
     - `reveal`: `{qid, correct, accepted[], right[]}`
     - `board[]`, `boardKind`
@@ -65,7 +67,7 @@ Opening `public/index.html` directly (file://) starts **demo mode**: an in-memor
 - An answer is accepted only for the current question, while `phase === "open"` and before `deadline + 1.5s`.
 - The server auto-locks expired games every 300 ms, even if the host page is closed.
 
-**What a team sees:** the live game, the team names of the current `sid`, and its own answers only.
+**What a team sees:** the live game, the team names of the current `sid`, and its own answers only. `viewFor` (`teamGameView` in `rules.js`) also withholds answer data from the game document: `reveal` is sent only in `phase === "reveal"`, `review` only in `phase === "review"` and trimmed to the questions the host has reached. Keep this in mind for any new field that carries correct answers.
 
 ### Client — `public/`, plain classic scripts with no build step, sharing globals and loaded in order
 
@@ -92,6 +94,7 @@ Opening `public/index.html` directly (file://) starts **demo mode**: an in-memor
 - **One team = one device.**
 - **Rounds:** name, picture (default is a generated SVG cover) and background music (default is the built-in synth). Music plays only on the host device, from the round intro through the round, and pauses for questions that have their own audio or video. There is a player with pause and volume.
 - **Question media:** audio and/or video **uploaded from the computer only**. YouTube links were explicitly dropped by the user — do not re-add them. Media plays on the host screen only; phones show "watch/listen on the host screen".
+- **Reveal mode per game** (`revealMode`): "after each question" (original) or "at the end of each round". In round mode the host screen (projector) shows no answer content, distribution or verdicts until the review, and phones show only "Answer accepted". The review walks through the round's questions with "Next" (correct answer + how many teams were right), then shows the round results table, then the next round intro. Phones see per-question verdicts, then round points and place. Manual overrides on the Results tab work before and during the review (`applyOverrides` rebuilds `review`).
 - **Answer checking lives on the Results tab:** a per-question review with auto ticks and manual overrides (checkbox, "auto"/"manual" label, "Restore auto-check"). The Game tab shows only verdict tags and a link to the review.
 - **Ranking is sequential (1, 2, 3, 4)**; ties are broken alphabetically. The user found shared places (1, 2, 2, 2) confusing.
 - The join QR code and address appear in the lobby and on the Teams tab, with a selector when there are several LAN IPs.

@@ -89,12 +89,12 @@ function hostView() {
   const body = { game: hostGame, questions: hostQuestions, teams: hostTeams, results: hostResults }[S.tab]();
   return `<nav class="tabs" role="tablist">${tabs.map(([k, l, c]) => `<button role="tab" data-act="tab" data-v="${k}" aria-selected="${S.tab === k}">${esc(l)}${c != null ? `<span class="count">${c}</span>` : ""}</button>`).join("")}</nav>${body}`;
 }
-const phaseCls = { lobby: "", round: "reveal", open: "open", locked: "locked", reveal: "reveal", final: "reveal" };
+const phaseCls = { lobby: "", round: "reveal", open: "open", locked: "locked", reveal: "reveal", review: "reveal", final: "reveal" };
 function playerHTML() {
   const rid = curRoundId(), r = rid ? roundById(rid) : null, mq = mediaQActive();
   const on = Music.playing && !Music.blocked && !S.preview;
   let label;
-  if (!["round", "open", "locked", "reveal"].includes(S.game.phase) || !r) label = t("bgStarts");
+  if (!["round", "open", "locked", "reveal", "review"].includes(S.game.phase) || !r) label = t("bgStarts");
   else label = `${r.name}: ${r.music ? (r.musicName || t("ownMusic")) : t("stdMelody")}`;
   if (mq) label = t("bgPausedMedia");
   if (Music.blocked) label += t("blockedHint");
@@ -140,19 +140,21 @@ function hostGame() {
         ${rows.length ? boardHTML(rows, false) : `<p class="muted small">${esc(t("noTeamsYet"))}</p>`}</section>
     </div>`;
   }
-  const r = roundOfQ(q), ri = roundIndex(r.id);
+  if (g.phase === "review") return player + reviewStage();
+  const r = roundOfQ(q), ri = roundIndex(r.id), held = roundMode(); // held: the projector shows no answers or verdicts before the round review
   const answered = Object.keys(S.teams).filter(id => (S.answers[id] || {})[q.id]);
   const k = S.keys.keys[q.id] || {};
   let opts;
   if (q.type === "choice") {
     const counts = [0, 0, 0, 0]; answered.forEach(id => { const c = S.answers[id][q.id].c; if (c != null) counts[c]++; });
-    const showRight = g.phase === "reveal", showCnt = g.phase !== "open";
+    const showRight = g.phase === "reveal", showCnt = g.phase !== "open" && !held;
     opts = `<div class="opts host">${q.options.map((o, i) => o ? `<div class="opt ${LT[i]} ${showRight ? (i === k.correct ? "right" : "dim") : ""}">
       <span class="fill" style="width:${showCnt && answered.length ? Math.round(counts[i] / answered.length * 100) : 0}%"></span>
       <span class="L">${LT[i]}</span><span class="t">${esc(o)}</span>${showCnt ? `<span class="cnt">${counts[i]}</span>` : ""}</div>` : "").join("")}</div>`;
   } else opts = `<div class="note" style="margin:0">${esc(t("freeForm"))} ${g.phase === "reveal" ? `${esc(t("acceptedAre"))} <b>${esc((k.accepted || []).join(", ") || t("notSet"))}</b>` : esc(t("teamsType"))}</div>`;
   let ctrl = "";
   if (g.phase === "open") ctrl = `<button class="btn primary" data-act="lock">${esc(t("lockBtn"))}</button>`;
+  else if (g.phase === "locked" && held) ctrl = isLastOfRound() ? `<button class="btn primary" data-act="review">${esc(t("reviewRoundBtn"))}</button>` : actionBtn(next);
   else if (g.phase === "locked") ctrl = `<button class="btn primary" data-act="reveal">${esc(t("revealBtn"))}</button>`;
   else if (g.phase === "reveal") ctrl = next ? `${actionBtn(next)}<button class="btn" data-act="final">${esc(t("finishBtn"))}</button>` : `<button class="btn primary" data-act="final">${esc(t("finalBtn"))}</button>`;
   return player + `<div class="stage">
@@ -161,6 +163,7 @@ function hostGame() {
       <p class="qtext">${esc(q.text)}</p>
       ${mediaSlots(q)}
       ${opts}
+      ${held ? `<p class="muted small" style="margin:14px 0 0">${esc(t("answersHeldBack"))}</p>` : ""}
       <div class="row" style="margin-top:20px">${ctrl}</div>
     </section>
     <section class="panel">
@@ -170,6 +173,27 @@ function hostGame() {
     </section>
   </div>`;
 }
+/* Host screen during the end-of-round review: one question at a time, then the table. */
+function reviewStage() {
+  const g = S.game, rv = g.review;
+  if (!rv || !rv.items) return `<div class="panel"><p class="muted">${esc(t("loading"))}</p></div>`;
+  const r = roundById(rv.rid) || roundsOf()[0], ri = roundIndex(r.id), n = rv.items.length, tag = `<span class="tag">${esc(t("roundTag", ri + 1, r.name))}</span>`;
+  const phase = `<span class="phase reveal">${esc(t("ph_review"))}</span>`;
+  if (rv.step >= n) {
+    const next = nextAction(), rows = withRanks(g.board || []);
+    return `<div class="panel stack"><div class="row">${tag}${phase}</div><h2 style="font-size:clamp(24px,3vw,36px)">${esc(t("roundResults", ri + 1))}</h2>
+      ${rows.length ? boardHTML(rows, true) : `<p class="muted small">${esc(t("noTeamsYet"))}</p>`}
+      <div class="row">${next ? actionBtn(next) : `<button class="btn primary" data-act="final">${esc(t("finalBtn"))}</button>`}</div></div>`;
+  }
+  const it = rv.items[rv.step], q = g.questions.find(x => x.id === it.qid); if (!q) return "";
+  const opts = q.type === "choice"
+    ? `<div class="opts host">${q.options.map((o, i) => o ? `<div class="opt ${LT[i]} ${i === it.correct ? "right" : "dim"}"><span class="L">${LT[i]}</span><span class="t">${esc(o)}</span></div>` : "").join("")}</div>`
+    : `<div class="note" style="margin:0">${esc(t("acceptedAre"))} <b>${esc((it.accepted || []).join(", ") || t("notSet"))}</b></div>`;
+  return `<div class="panel stack"><div class="row">${tag}<span class="qnum">${esc(t("qOf", rv.step + 1, n))}</span>${phase}</div>
+    <p class="qtext">${esc(q.text)}</p>${opts}
+    <p style="font-weight:700;font-size:20px;margin:0">${esc(t("rightCount", it.right.length, Object.keys(S.teams).length))}</p>
+    <div class="row"><button class="btn primary" data-act="reviewNext">${esc(t("nextBtn"))}</button></div></div>`;
+}
 function answerCell(q, a) {
   if (!a) return `<span class="muted small">${esc(t("noAnswer"))}</span>`;
   return q.type === "choice" ? (a.c != null ? `<span class="chipL ${LT[a.c]}">${LT[a.c]}</span> <span class="small">${esc(q.options[a.c])}</span>` : "") : `<span class="small" style="overflow-wrap:anywhere">${esc(t("q", a.t))}</span>`;
@@ -178,9 +202,10 @@ const sortedTeamIds = () => Object.keys(S.teams).sort((a, b) => S.teams[a].name.
 function answersList(q) {
   const ids = sortedTeamIds();
   if (!ids.length) return `<p class="muted small">${esc(t("noTeamsYet"))}</p>`;
-  const showV = S.game.phase !== "open";
+  const held = roundMode(), showV = S.game.phase !== "open" && !held;
   return `<ul class="list">${ids.map(id => {
     const a = (S.answers[id] || {})[q.id];
+    if (held) return `<li><span class="dot ${a ? "on" : ""}"></span><span class="grow" style="min-width:0"><b>${esc(S.teams[id].name)}</b><br>${a ? `<span class="small muted">${esc(t("stAcceptedFinal"))}</span>` : `<span class="muted small">${esc(t("noAnswer"))}</span>`}</span></li>`;
     let v = ""; if (showV && a) { const ok = isCorrect(q, a, id); v = `<span class="tag ${ok ? "ok" : "no"}">${esc(ok ? t("correct") : t("wrong"))}</span>`; }
     return `<li><span class="dot ${a ? "on" : ""}"></span><span class="grow" style="min-width:0"><b>${esc(S.teams[id].name)}</b><br>${answerCell(q, a)}</span>${v}</li>`;
   }).join("")}</ul>`;
@@ -194,7 +219,10 @@ function hostQuestions() {
   return `<div class="stack">
     ${running ? `<div class="note">${esc(t("runningNote"))}</div>` : ""}
     ${!S.assets ? `<div class="note">${esc(t("assetsNote"))}</div>` : ""}
-    <div class="panel"><label class="f" for="ed-title">${esc(t("gameTitle"))}</label><input type="text" id="ed-title" data-ed="title" value="${esc(S.draft.title)}" maxlength="60"></div>
+    <div class="panel"><label class="f" for="ed-title">${esc(t("gameTitle"))}</label><input type="text" id="ed-title" data-ed="title" value="${esc(S.draft.title)}" maxlength="60">
+      <label class="f" for="ed-reveal" style="margin-top:14px">${esc(t("revealModeLabel"))}</label>
+      <select id="ed-reveal" data-ed="revealMode" style="width:auto"><option value="question" ${S.draft.revealMode !== "round" ? "selected" : ""}>${esc(t("revealQuestion"))}</option><option value="round" ${S.draft.revealMode === "round" ? "selected" : ""}>${esc(t("revealRound"))}</option></select>
+      ${S.draft.revealMode === "round" ? `<p class="muted small" style="margin:6px 0 0">${esc(t("revealModeHint"))}</p>` : ""}</div>
     <div>${rounds || `<div class="panel empty">${esc(t("noRounds"))}</div>`}</div>
     <button class="btn" data-act="addr">${esc(t("addRound"))}</button>
     ${S.dirty || S.editErr ? `<div class="sticky-save" role="region" aria-label="${esc(t("save"))}"><span class="grow">${esc(S.editErr || t("unsaved"))}</span><button class="btn ghost" style="color:var(--bg);background:transparent" data-act="discard">${esc(t("discard"))}</button><button class="btn" data-act="save">${esc(t("save"))}</button></div>` : ""}
@@ -370,7 +398,8 @@ function teamView() {
   else if (g.phase === "round") {
     const r = roundById(g.ri) || roundsOf()[0], ri = roundIndex(r.id);
     body = `<div class="panel">${coverHTML(r, ri)}<p class="qnum" style="margin:14px 0 0">${esc(t("roundLabel", ri + 1))}</p><p class="round-title" style="font-size:clamp(24px,7vw,34px)">${esc(r.name)}</p><p class="muted" style="margin:0">${esc(t("firstSoon", roundQCount(r.id)))}</p></div>${g.board ? teamBoard(t("prelimRes")) : ""}`;
-  } else if (g.phase === "lobby" || !q) body = `<div class="panel big-msg"><div class="glyph" aria-hidden="true">…</div><h2 style="font-size:22px;margin:14px 0 6px">${esc(t("inGame"))}</h2><p class="muted">${esc(t("waitFirst"))}</p></div>`;
+  } else if (g.phase === "review") body = teamReview();
+  else if (g.phase === "lobby" || !q) body = `<div class="panel big-msg"><div class="glyph" aria-hidden="true">…</div><h2 style="font-size:22px;margin:14px 0 6px">${esc(t("inGame"))}</h2><p class="muted">${esc(t("waitFirst"))}</p></div>`;
   else body = teamQuestion(q);
   if (S.teamErr) body += `<p class="err" role="alert">${esc(S.teamErr)}</p>`;
   return `<div class="phone">${head}${body}</div>`;
@@ -379,7 +408,7 @@ function teamQuestion(q) {
   const g = S.game, a = myAnswer(), acc = accepting(), rv = g.phase === "reveal" && g.reveal && g.reveal.qid === q.id ? g.reveal : null, r = roundOfQ(q);
   let status = "";
   if (acc) status = a ? `<span class="tag ok">${esc(t("stAccepted"))}</span>` : `<span class="tag">${esc(t("stWaiting"))}</span>`;
-  else if (!rv) status = `<span class="tag">${esc(a ? t("stClosedYours") : t("stClosedNone"))}</span>`;
+  else if (!rv) status = a && roundMode() ? `<span class="tag ok">${esc(t("stAcceptedFinal"))}</span>` : `<span class="tag">${esc(a ? t("stClosedYours") : t("stClosedNone"))}</span>`;
   let input;
   if (q.type === "choice") input = `<div class="opts">${q.options.map((o, i) => o ? `<button class="opt ${LT[i]} ${rv ? (i === rv.correct ? "right" : "dim") : (!acc && a && a.c !== i ? "dim" : "")}" data-act="pick" data-i="${i}" aria-pressed="${a?.c === i}" ${acc ? "" : "disabled"}><span class="L">${LT[i]}</span><span class="t">${esc(o)}</span></button>` : "").join("")}</div>`;
   else input = acc ? `<div class="textans"><input type="text" id="team-text" data-ed="teamText" maxlength="120" value="${esc(S.teamText)}" placeholder="${esc(t("yourAnswerPh"))}" autocomplete="off"><button class="btn primary" data-act="sendText">${esc(a ? t("change") : t("send"))}</button></div>${a ? `<p class="muted small" style="margin:8px 0 0">${esc(t("sent", a.t))}</p>` : ""}`
@@ -398,6 +427,25 @@ function teamQuestion(q) {
     ${input}
     <div style="margin-top:14px">${status}</div>
   </div>${verdict}`;
+}
+/* Phone during the end-of-round review. The server only sends the questions the host has reached. */
+function teamReview() {
+  const g = S.game, rv = g.review, items = (rv && rv.items) || [];
+  if (!items.length) return `<div class="panel big-msg"><div class="glyph" aria-hidden="true">…</div><h2 style="font-size:22px;margin:14px 0 6px">${esc(t("roundReview"))}</h2><p class="muted">${esc(t("reviewWaiting"))}</p></div>`;
+  const total = roundQCount(rv.rid), me = S.me.id;
+  if (rv.step >= total) {
+    const pts = items.reduce((s, it) => { const q = g.questions.find(x => x.id === it.qid); return s + (q && (it.right || []).includes(me) ? Number(q.points) || 1 : 0); }, 0);
+    const mine = withRanks(g.board || []).find(x => x.id === me);
+    return `<div class="hero" style="margin-bottom:16px"><h2>${esc(t("yourRoundPoints", pts))}</h2>${mine ? `<p class="muted" style="margin:6px 0 0">${esc(t("yourPlace", mine.rank))} · ${esc(t("youHave", mine.score))}</p>` : ""}</div>${teamBoard(t("roundResults", roundIndex(rv.rid) + 1))}`;
+  }
+  const it = items[Math.min(rv.step, items.length - 1)], q = g.questions.find(x => x.id === it.qid); if (!q) return "";
+  const a = (S.myAnswers || {})[q.id], right = (it.right || []).includes(me);
+  const input = q.type === "choice"
+    ? `<div class="opts">${q.options.map((o, i) => o ? `<button class="opt ${LT[i]} ${i === it.correct ? "right" : "dim"}" aria-pressed="${a?.c === i}" disabled><span class="L">${LT[i]}</span><span class="t">${esc(o)}</span></button>` : "").join("")}</div>`
+    : `<div class="panel" style="padding:14px">${a ? `${esc(t("yourAnswerIs"))} <b>${esc(t("q", a.t))}</b>` : `<span class="muted">${esc(t("noAns"))}</span>`}</div>`;
+  return `<div class="panel"><div class="row"><span class="tag">${esc(t("roundReview"))}</span><span class="qnum grow">${esc(t("qOf", rv.step + 1, total))}</span></div>
+    <p class="qtext" style="font-size:clamp(20px,5vw,26px)">${esc(q.text)}</p>${input}</div>
+    <div class="hero" style="margin-top:16px"><h2>${esc(!a ? t("vNoAnswer") : right ? t("vRight") : t("vMiss"))}</h2>${q.type === "text" ? `<p class="muted" style="margin:6px 0 0">${esc(t("correctWas", (it.accepted || [])[0] || "—"))}</p>` : ""}</div>`;
 }
 function teamBoard(title) {
   const rows = withRanks(S.game.board || []);

@@ -96,7 +96,13 @@ const T = {
     vNoAnswer: "No answer", vRight: "Correct!", vMiss: "Missed", correctWas: x => `Correct answer: ${x}. `, youHave: n => `You have ${nounL("en", n, "point")}.`,
     watchNote: "Watch the clip on the host screen.", listenNote: "Listen to the clip on the host screen.",
     coverAria: n => `Round ${n} cover`, roundPicAlt: n => `Round ${n} picture`,
-    musicAfterMedia: "Background music returns after the media question", q: s => `“${s}”`
+    musicAfterMedia: "Background music returns after the media question", q: s => `“${s}”`,
+    ph_review: "Round review", revealModeLabel: "When to show answers", revealQuestion: "After each question", revealRound: "At the end of each round",
+    revealModeHint: "At the end of the round, the host walks through every question: the correct answer and how many teams got it right. Teams only see “Answer accepted” until then.",
+    reviewRoundBtn: "Show round answers", nextBtn: "Next", rightCount: (a, b) => `Answered correctly: ${a} of ${b}`,
+    roundResults: n => `Results after round ${n}`, answersHeldBack: "Answers will be revealed at the end of the round.",
+    stAcceptedFinal: "Answer accepted", yourRoundPoints: n => `Points for the round: ${n}`, yourPlace: n => `Your place: ${n}`,
+    roundReview: "Round review", reviewWaiting: "The host is about to go through the round."
   },
   ru: {
     appName: "Квиз-пульт", loading: "Загружаем…",
@@ -181,7 +187,13 @@ const T = {
     vNoAnswer: "Без ответа", vRight: "Верно!", vMiss: "Мимо", correctWas: x => `Правильный ответ: ${x}. `, youHave: n => `У вас ${nounL("ru", n, "point")}.`,
     watchNote: "Смотрите фрагмент на экране ведущего.", listenNote: "Слушайте фрагмент на экране ведущего.",
     coverAria: n => `Обложка раунда ${n}`, roundPicAlt: n => `Картинка раунда ${n}`,
-    musicAfterMedia: "Фон вернётся после вопроса с медиа", q: s => `«${s}»`
+    musicAfterMedia: "Фон вернётся после вопроса с медиа", q: s => `«${s}»`,
+    ph_review: "Разбор раунда", revealModeLabel: "Когда показывать ответы", revealQuestion: "После каждого вопроса", revealRound: "В конце каждого раунда",
+    revealModeHint: "В конце раунда ведущий разбирает каждый вопрос: правильный ответ и сколько команд ответили верно. До этого команды видят только «Ответ принят».",
+    reviewRoundBtn: "Показать ответы раунда", nextBtn: "Дальше", rightCount: (a, b) => `Верно ответили: ${a} из ${b}`,
+    roundResults: n => `Результаты после раунда ${n}`, answersHeldBack: "Ответы покажем в конце раунда.",
+    stAcceptedFinal: "Ответ принят", yourRoundPoints: n => `Баллы за раунд: ${n}`, yourPlace: n => `Ваше место: ${n}`,
+    roundReview: "Разбор раунда", reviewWaiting: "Ведущий сейчас разберёт раунд."
   }
 };
 
@@ -194,4 +206,4 @@ const tL = (lg, k, ...a) => { const d = T[lg][k] ?? T.en[k]; return typeof d ===
 const t = (k, ...a) => tL(curLang(), k, ...a);
 const fmtDate = ts => { try { return new Intl.DateTimeFormat(curLang() === "ru" ? "ru-RU" : "en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(ts)); } catch (e) { return ""; } };
 
-const DEFAULT_GAME = { title: "", lang: "en", regOpen: true, phase: "lobby", idx: -1, ri: null, rounds: [], questions: [], deadline: null, reveal: null, board: null, boardKind: null, sid: null, aid: null, history: [], createdAt: 0 };
+const DEFAULT_GAME = { title: "", lang: "en", regOpen: true, phase: "lobby", idx: -1, ri: null, rounds: [], questions: [], deadline: null, reveal: null, board: null, boardKind: null, sid: null, aid: null, history: [], createdAt: 0, revealMode: "question", review: null };
