@@ -11,7 +11,7 @@ Repo: https://github.com/PTaHHHa/quiz-desk. The user works on Windows, in VS Cod
 ```bash
 npm start        # node server/index.js — opens the host page at http://localhost:3000
 npm run dev      # node --watch
-npm test         # node --test; 17 tests (rules + HTTP API), also run by GitHub Actions on Node 18/20/22
+npm test         # node --test; 21 tests (rules, network detection + HTTP API), also run by GitHub Actions on Node 18/20/22
 ```
 
 Opening `public/index.html` directly (file://) starts **demo mode**: an in-memory store with sample games and auto-answering bots.
@@ -21,7 +21,7 @@ Opening `public/index.html` directly (file://) starts **demo mode**: an in-memor
 ### Server — `server/`, CommonJS, Node built-ins only
 
 - `index.js` handles the routes:
-  - `GET /api/me` → `{uid, host, join[], hostLink}`
+  - `GET /api/me` → `{uid, host, join[], hotspot, hostLink}`
   - `GET /api/stream` sends Server-Sent Events (`event: state` carrying the viewer's full visible state)
   - `POST /api/doc` takes `{path, data|null}` and is validated by the rules
   - `POST /api/upload` accepts a raw body (host only, ≤500 MB)
@@ -30,7 +30,7 @@ Opening `public/index.html` directly (file://) starts **demo mode**: an in-memor
 - `rules.js` holds `viewFor`, `applyWrite`, `lockExpired`. **All access control lives here, and it is unit-tested.**
 - `store.js` is the JSON-file store (`data/db.json`, debounced atomic write). `seed.js` holds the example game for the first start.
 - `config.js` reads env vars: `PORT`, `QUIZDESK_DATA`, `QUIZDESK_MAX_UPLOAD_MB`, `NO_OPEN`.
-- `http-utils.js` has `send`, `readJson`, `serveFile` (Range) and `joinUrls`, which lists LAN IPs with 192.168.* first.
+- `http-utils.js` has `send`, `readJson`, `serveFile` (Range) and `networkInfo`/`lanAddresses`/`isHotspot`. The mobile hotspot counts as on when a LAN IPv4 is 192.168.137.1 (Windows), 192.168.2.1 (macOS) or 10.42.0.1 (Linux); that address goes first in `join[]`, then 192.168.* first. `index.js` recomputes it every 15 s and, on change, sends host clients `event: net` with `{join, hotspot}` (also sent on connect), so the QR code and the hotspot tip update without a reload or restart.
 
 **Identity:**
 - Each device generates a random 32-hex secret, kept in localStorage as `quizdesk-device` and sent in the `X-Device` header (or `?d=` for SSE). The public uid is `u_` + the first 16 hex characters of sha256(secret).
@@ -94,8 +94,8 @@ Opening `public/index.html` directly (file://) starts **demo mode**: an in-memor
 - **Question media:** audio and/or video **uploaded from the computer only**. YouTube links were explicitly dropped by the user — do not re-add them. Media plays on the host screen only; phones show "watch/listen on the host screen".
 - **Reveal mode per game** (`revealMode`): "after each question" (original) or "at the end of each round". In round mode the host screen (projector) shows no answer content, distribution or verdicts until the review, and phones show only "Answer accepted". The review walks through the round's questions with "Next" (correct answer + how many teams were right), then shows the round results table, then the next round intro. Phones see per-question verdicts, then round points and place. Manual overrides on the Results tab work before and during the review (`applyOverrides` rebuilds `review`).
 - **Answer checking lives on the Results tab:** a per-question review with auto ticks and manual overrides (checkbox, "auto"/"manual" label, "Restore auto-check"). The Game tab shows only verdict tags and a link to the review.
-- **Ranking: teams with equal scores share a place** (1, 1, 3); the next place is skipped. Ties are listed alphabetically. This replaced the earlier sequential numbering at the user's request. Same on host and team screens (`withRanks` in `game.js`).
-- The join QR code and address appear in the lobby and on the Teams tab, with a selector when there are several LAN IPs.
+- **Ranking is sequential (1, 2, 3, 4)**; ties are broken alphabetically. The user found shared places (1, 2, 2, 2) confusing.
+- The join QR code and address appear in the lobby and on the Teams tab, with a selector when there are several LAN IPs. When the hotspot is off, a non-error tip with the Windows path (Settings → Network & internet → Mobile hotspot) appears next to the QR code (`hotspotTip`); when on, `hotspotOn`.
 
 ## Conventions
 

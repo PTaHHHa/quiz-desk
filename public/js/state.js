@@ -14,7 +14,7 @@ const S = {
   draft: null, dirty: false, editErr: "", uploading: null, uploadTarget: null, uploadKind: null,
   teamName: "", teamText: "", teamErr: "", renaming: false,
   stale: false, readOnly: false, toast: "", ask: null, busy: false,
-  reviewQ: null, musicOn: true, vol: 0.6, preview: null, bots: []
+  hotspot: false, reviewQ: null, musicOn: true, vol: 0.6, preview: null, bots: []
 };
 try { const l = localStorage.getItem("quizdesk-lang"); if (LANGS.includes(l)) S.homeLang = l; } catch (e) {}
 

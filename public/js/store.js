@@ -82,6 +82,11 @@ function createServerDb() {
     Object.keys(mirror).forEach(k => delete mirror[k]); Object.assign(mirror, v);
     ready = true; if (S.stale) { S.stale = false; render(); } fireAll();
   });
+  es.addEventListener("net", ev => { // host only: addresses and hotspot flag, refreshed by the server
+    const n = JSON.parse(ev.data), cur = (S.join || [])[S.joinIdx];
+    S.join = n.join || []; S.hotspot = !!n.hotspot;
+    S.joinIdx = Math.max(0, S.join.indexOf(cur)); render();
+  });
   es.onerror = () => { if (!S.stale) { S.stale = true; render(); } };
   const put = async (p, data) => {
     if (data) mirror[p] = clone(data); else delete mirror[p];

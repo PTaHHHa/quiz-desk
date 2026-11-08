@@ -109,6 +109,7 @@ function joinPanel() {
   return `<div class="joinbox"><div class="qr">${QR.svg(url, esc(t("joinH")))}</div><div>
     <h3>${esc(t("joinH"))}</h3><p class="joinurl">${esc(url.replace(/^https?:\/\//, "").replace(/\/$/, ""))}</p>
     <p class="muted small" style="margin:0">${esc(t("joinHint"))}</p>
+    <p class="small ${S.hotspot ? "muted" : ""}" style="margin:8px 0 0">${esc(t(S.hotspot ? "hotspotOn" : "hotspotTip"))}</p>
     ${S.join.length > 1 ? `<label class="small muted">${esc(t("otherAddr"))} <select id="join-sel" data-join="1">${S.join.map((u, i) => `<option value="${i}" ${i === S.joinIdx ? "selected" : ""}>${esc(u)}</option>`).join("")}</select></label>` : ""}
   </div></div>`;
 }

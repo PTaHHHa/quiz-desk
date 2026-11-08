@@ -9,7 +9,7 @@ async function boot() {
   if (location.protocol.startsWith("http")) { try { me = await api("GET", "/api/me"); } catch (e) { me = null; } }
   if (me && me.uid) {
     S.mode = "server"; S.db = createServerDb(); S.me = { id: me.uid, canEdit: !!me.host };
-    S.join = me.join || []; S.joinIdx = 0; S.assets = me.host ? serverAssets : null;
+    S.join = me.join || []; S.hotspot = !!me.hotspot; S.joinIdx = 0; S.assets = me.host ? serverAssets : null;
   } else {
     S.mode = "demo"; S.db = createMockDb(); S.assets = mockAssets; S.me = { id: "demo-you", canEdit: true }; demoSeed(S.db);
   }

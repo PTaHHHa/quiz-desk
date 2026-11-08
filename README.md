@@ -50,7 +50,17 @@ Settings are environment variables:
 
 All data lives in `data/`: `db.json` with games, teams and answers, and `media/` with uploaded files. The folder is git-ignored. To back up, copy it; to start from scratch, delete it.
 
-## If phones can't connect
+## Мобильный хот-спот
+
+На площадке с гостевым Wi-Fi телефоны часто не видят ноутбук. Надёжный выход — раздать сеть с самого ноутбука, и команды подключатся к ней:
+
+- **Windows:** Параметры → Сеть и Интернет → Мобильный хот-спот → включить.
+- **macOS:** Системные настройки → Общий доступ → Общий интернет.
+- **Linux:** создайте точку доступа в NetworkManager.
+
+Сервер сам замечает хот-спот по адресам ноутбука (`192.168.137.1` на Windows, `192.168.2.1` на macOS, `10.42.0.1` на Linux), ставит его первым в списке для QR-кода и пересчитывает список каждые 15 секунд. **Перезапускать сервер и обновлять страницу не нужно**: включили хот-спот — через несколько секунд QR-код на странице ведущего поменяется сам. Пока хот-спот выключен, рядом с QR-кодом (в лобби и на вкладке «Команды») показывается совет его включить; дома он обычно не нужен.
+
+## Если телефоны не подключаются
 
 1. **Android + Chrome.** Allow Chrome access to "Nearby devices": Settings → Apps → Chrome → Permissions. Without it, Chrome can't open local addresses and shows `ERR_TOO_MANY_RETRIES`.
 2. **Windows firewall.** Allow inbound connections for Node.js. One command in an administrator PowerShell does it:

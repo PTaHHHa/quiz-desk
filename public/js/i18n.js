@@ -102,7 +102,9 @@ const T = {
     reviewRoundBtn: "Show round answers", nextBtn: "Next", rightCount: (a, b) => `Answered correctly: ${a} of ${b}`,
     roundResults: n => `Results after round ${n}`, answersHeldBack: "Answers will be revealed at the end of the round.",
     stAcceptedFinal: "Answer accepted", yourRoundPoints: n => `Points for the round: ${n}`, yourPlace: n => `Your place: ${n}`,
-    roundReview: "Round review", reviewWaiting: "The host is about to go through the round."
+    roundReview: "Round review", reviewWaiting: "The host is about to go through the round.",
+    hotspotTip: "Tip: if phones can’t connect or the venue’s Wi-Fi isolates devices, turn on this computer’s mobile hotspot (Windows: Settings → Network & internet → Mobile hotspot) and have teams join its network. This code updates by itself within about 15 seconds. At home you probably don’t need it.",
+    hotspotOn: "Mobile hotspot detected — the code above points to it. Teams should join the hotspot’s Wi-Fi network."
   },
   ru: {
     appName: "Квиз-пульт", loading: "Загружаем…",
@@ -193,7 +195,9 @@ const T = {
     reviewRoundBtn: "Показать ответы раунда", nextBtn: "Дальше", rightCount: (a, b) => `Верно ответили: ${a} из ${b}`,
     roundResults: n => `Результаты после раунда ${n}`, answersHeldBack: "Ответы покажем в конце раунда.",
     stAcceptedFinal: "Ответ принят", yourRoundPoints: n => `Баллы за раунд: ${n}`, yourPlace: n => `Ваше место: ${n}`,
-    roundReview: "Разбор раунда", reviewWaiting: "Ведущий сейчас разберёт раунд."
+    roundReview: "Разбор раунда", reviewWaiting: "Ведущий сейчас разберёт раунд.",
+    hotspotTip: "Совет: если телефоны не подключаются или Wi-Fi на площадке изолирует устройства, включите мобильный хот-спот на этом компьютере (Windows: Параметры → Сеть и Интернет → Мобильный хот-спот) и пусть команды подключатся к его сети. Этот код обновится сам примерно за 15 секунд. Дома он, скорее всего, не нужен.",
+    hotspotOn: "Мобильный хот-спот найден — код выше ведёт на него. Командам нужно подключиться к Wi-Fi-сети хот-спота."
   }
 };
 
